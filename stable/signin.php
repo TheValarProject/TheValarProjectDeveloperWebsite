@@ -198,7 +198,7 @@ $(document).ready(function() {
    <p><a class="hiddenLink">Forgot password</a></p>
    <button id="signin_submit">Sign In</button>
   </form>
-  <a href="register.php">Don't have an account? Sign up here!</a>
+  <a href="register.php">Don't have an account? Register here!</a>
   <?php bodyEnd(); ?>
  </body>
 </html>
