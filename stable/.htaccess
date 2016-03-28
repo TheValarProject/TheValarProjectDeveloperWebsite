@@ -20,3 +20,9 @@ RewriteRule ^index\.htm$ "http\:\/\/tvp\.x10host\.com\/index\.php" [R=301,L]
 SetEnv APP_ROOT_PATH /home/tvpx10ho/public_html/
 
 Options -Indexes
+
+Options +FollowSymLinks
+RewriteEngine On
+RewriteBase /
+RewriteCond %{HTTP_HOST} !^tvp\.elementfx\.com$ [NC]
+RewriteRule ^(.*)$ http://tvp.elementfx.com/$1 [R=301,L]
