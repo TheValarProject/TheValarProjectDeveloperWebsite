@@ -20,7 +20,7 @@ $dbReader = new DBManager('ohtar', 'logindb');
 $loggedIn = isset($_COOKIE['username']);
 
 function head() {
-	echo '<link rel="icon" type="image/png" href="/resources/images/favicon.png" /><link rel="stylesheet" type="text/css" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/themes/smoothness/jquery-ui.css" /><link rel="stylesheet" type="text/css" href="/resources/styling/baseStyling.css" /><script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script><script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/jquery-ui.min.js"></script><script src="/resources/scripts/baseScript.php"></script>';
+	echo '<link rel="icon" type="image/png" href="/resources/images/favicon.png" /><link rel="stylesheet" type="text/css" href="/resources/styling/jquery-ui-smoothness/jquery-ui.min.css" /><link rel="stylesheet" type="text/css" href="/resources/styling/baseStyling.css" /><script type="text/javascript" src="/resources/scripts/jquery.min.js"></script><script type="text/javascript" src="/resources/scripts/jquery-ui.min.js"></script><script src="/resources/scripts/baseScript.php"></script>';
 }
 
 function bodyStart() {
