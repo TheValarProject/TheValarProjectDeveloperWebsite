@@ -276,6 +276,7 @@ $(document).ready(function() {
      </tr>
     </tbody>
    </table>
+   <p>By registering, you are participating in The Valar Project and therefore must abide by <a href="/toc.php">our Terms and Conditions</a>.</p>
    <button id="register_submit">Register</button>
   </form>
   <a href="signin.php">Already have an account? Log in here!</a>
