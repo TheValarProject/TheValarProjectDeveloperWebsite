@@ -16,51 +16,6 @@ include('pageContent.php');
 }
   </style>
   <script type="text/javascript">
-function hasSessionStorage() {
-	try {
-		var storage = window["sessionStorage"],	x = '__storage_test__';
-		storage.setItem(x, x);
-		storage.removeItem(x);
-		return true;
-	}
-	catch(e) {
-		return false;
-	}
-}
-
-function readCookie(name) {
-	var nameEQ = name + "=";
-	var ca = document.cookie.split(';');
-	for(var i=0;i < ca.length;i++) {
-		var c = ca[i];
-		while (c.charAt(0) == ' ') {
-			c = c.substring(1,c.length);
-		}
-		if (c.indexOf(nameEQ) == 0) {
-			return c.substring(nameEQ.length,c.length);
-		}
-	}
-	return null;
-}
-
-function setPrivate(key, value) {
-	if(hasSessionStorage()) {
-		sessionStorage.setItem(key, value);
-	}
-	else {
-		document.cookie = key + "=" + value;
-	}
-}
-
-function getPrivate(key) {
-	if(hasSessionStorage()) {
-		return sessionStorage.getItem(key);
-	}
-	else {
-		return readCookie(key);
-	}
-}
-
 function submitRegister() {
 	var hasInvalid = false;
 	
