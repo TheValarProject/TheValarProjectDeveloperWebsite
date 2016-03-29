@@ -14,9 +14,14 @@ include('pageContent.php');
 .noBottom {
  border-bottom: none !important;
 }
+
+#register_feedback {
+ display: none;
+}
   </style>
   <script type="text/javascript">
 function submitRegister() {
+	$("#register_feedback").hide();
 	var hasInvalid = false;
 	
 	var username = $("#username").val();
@@ -61,15 +66,18 @@ function submitRegister() {
 	map = map.split("");
 	shift = "7-3-46-9-4f-45-4e-5a-56-2c-2b-22-5-30-53-53-12-10-4-22-5a-e-4c-12-c-36-f-3a-4e-4f-46-4d-1d-4a-45-2c-4c-9-48-5d-4c-1a-5a-5b-22-23-41-19-4e-39-5d-49-51-3b-35-5-1a-5-4a-6-2c-29-55-30-13-9-36-54-37-16-5a-49".split("-");
 	password = password.split("").map(function(c, i) { return map[(map.indexOf(c) + parseInt(shift[i], 16)) % 94]; }).join("");
-	
-	$.post("/resources/serverside_scripts/login_manager.php", { op: "signup", username: username, email: $("#email").val(), password: password }, function(data) {
-		if(data.status == success) {
-			$("#pageContents").append("You have been registered up successfully. Please check your email for a message from us, and follow the link to activate your account. Until you do this, you will not be able to log in.");
+
+	$.post("/resources/serverside_scripts/login_manager.php", { op: "register", username: username, email: $("#email").val(), password: password }, function(data) {
+		if(data.status == "success") {
+			$("#register_feedback").html("You have been registered up successfully. Please check your email for a message from us, and follow the link to activate your account. Until you do this, you will not be able to log in.").show();
+			$("#register_form input").val("");
 		}
 		else {
-			$("#pageContents").append("An error occurred and you could not be registered, please try again later and report the issue if it persists.");
+			$("#register_feedback").html("An error occurred and you could not be registered, please try again later and report the issue if it persists.").show();
 		}
-	}, "json");
+	}, "json").fail(function() {
+		$("#register_feedback").html("An error occurred and you could not be registered, please try again later and report the issue if it persists.").show();
+	});
 }
 
 function verifyEmail(emailInput, async) {
@@ -173,12 +181,12 @@ function verifyUsername(async) {
 }
 
 $(document).ready(function() {
-	if(auth.signedIn) {
+	/*if(auth.signedIn) {
 		$("#register_form").hide();
 		// TODO add logout option
 		$("#pageContents").append("You are already signed in.");
 		return;
-	}
+	}*/
 	// TODO Replace with HMTL5 input validation
 	$("#email").blur(function() {
 		verifyEmail($(this));
@@ -198,7 +206,6 @@ $(document).ready(function() {
 	if($.trim($("#username").val()) != "") {
 		verifyUsername();
 	}
-	$("#register_submit").click(submitRegister);
 	$("#register_form").submit(function(e) { submitRegister(); e.preventDefault(); });
 });
   </script>
@@ -207,6 +214,7 @@ $(document).ready(function() {
   <?php bodyStart(); ?>
   <form id="register_form">
    <h1>Register</h1>
+   <div id="register_feedback"></div>
    <table>
     <tbody>
      <tr>
@@ -232,7 +240,7 @@ $(document).ready(function() {
     </tbody>
    </table>
    <p>By registering, you are participating in The Valar Project and therefore must abide by <a href="/toc.php">our Terms and Conditions</a>.</p>
-   <button id="register_submit">Register</button>
+   <button id="register_submit" type="submit">Register</button>
   </form>
   <a href="signin.php">Already have an account? Sign In here!</a>
   <?php bodyEnd(); ?>

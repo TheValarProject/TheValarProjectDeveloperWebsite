@@ -58,10 +58,12 @@ class Response {
 	// Addes a debug tag, but only if debugging is enabled on the server
 	function addDebugMessage($debugMessage) {
 		if($GLOBALS['debug']) {
-			if(is_null($this->array['debug'])) {
+			if(!array_key_exists('debug', $this->array)) {
 				$this->array['debug'] = array((string)$debugMessage);
 			}
-			$this->array['debug'] .= $debugMessage;
+			else {
+				array_push($this->array['debug'], $debugMessage);
+			}
 		}
 		return $this;
 	}
@@ -99,7 +101,7 @@ switch($_POST['op']) {
 		
 		$response->setResult($dbm->getUserId($_POST['username']) < 0)->setStatus("success");
 		break;
-	case 'signup':
+	case 'register':
 		// Check to make sure all necessary variables were passed with the request
 		if(!isset($_POST['username']) || !isset($_POST['email']) || !isset($_POST['password'])) {
 			$response->addDebugMessage('Username, email, or password has not been posted')->setErrorMessage(1);

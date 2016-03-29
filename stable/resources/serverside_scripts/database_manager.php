@@ -175,13 +175,14 @@ class DBManager {
 		$stmt->execute();
 		$uid = $this->getUserId($username);
 		$emailRes = $this->setUserEmail($uid, $emailAddress);
-		return $emailRes ? -1 : $uid;
+		return !$emailRes ? -1 : $uid;
 	}
 	
 	function setUserEmail($userid, $address) {
 		if(strlen($address) > 254 || !filter_var($address, FILTER_VALIDATE_EMAIL) || $userid < 0) {
 			return false;
 		}
+		// TODO Modify this so that verification emails can be resent
 		if($this->getUserEmail($userid) === $address) {
 			return true;
 		}
@@ -252,7 +253,7 @@ class DBManager {
 		$stmt = $this->db->prepare('DELETE FROM `emailConfirmations` WHERE `token` = :token');
 		$stmt->bindParam(':token', $token, PDO::PARAM_STR);
 		if(!$stmt->execute()) {
-			return null;
+			// Non-critical error
 		}
 		
 		return $this->getUserEmail($userid);
