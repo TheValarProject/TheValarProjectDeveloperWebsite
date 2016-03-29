@@ -8,7 +8,7 @@
 // Import files
 try {
 	require_once(realpath($_SERVER['DOCUMENT_ROOT']).'/resources/serverside_scripts/global.php');
-	require($GLOBALS['root'].'/resources/serverside_scripts/database_manager.php');
+	require_once($GLOBALS['root'].'/resources/serverside_scripts/database_manager.php');
 }
 catch(Exception $e) {
 	http_response_code(500);
