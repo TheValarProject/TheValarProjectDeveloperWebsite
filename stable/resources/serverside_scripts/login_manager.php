@@ -58,8 +58,8 @@ class Response {
 	// Addes a debug tag, but only if debugging is enabled on the server
 	function addDebugMessage($debugMessage) {
 		if($GLOBALS['debug']) {
-			if(!array_key_exists('debug', $this->array)) {
-				$this->array['debug'] = array((string)$debugMessage);
+			if(!isset($this->array['debug'])) {
+				$this->array['debug'] = array($debugMessage);
 			}
 			else {
 				array_push($this->array['debug'], $debugMessage);
@@ -143,38 +143,58 @@ switch($_POST['op']) {
 		
 		$response->setStatus('success');
 		break;
-	case 'login':
-		// Check to make sure username, opaque and hmac were passed with the request
-		if(!isset($_POST['username']) || !isset($_POST['opaque']) || !isset($_POST['hmac'])) {
-			$response->addDebugMessage('Username, opaque or hmac has not been posted')->setErrorMessage(1);
+	case 'get_challenge':
+		$dbm = new DBManager('arphen', 'logindb');
+		
+		$challenge = $dbm->getChallenge($_SERVER['REMOTE_ADDR']);
+		
+		if($challenge == 'null') $challenge = null;
+		
+		$response->setResult($challenge)->setStatus('success');
+		break;
+	case 'signin':
+		// Check to make sure username, challenge and response were passed with the request
+		if(!isset($_POST['username']) || !isset($_POST['challenge']) || !isset($_POST['response'])) {
+			$response->addDebugMessage('Username, challenge or response has not been posted')->addDebugMessage($_POST)->setErrorMessage(1);
 		}
-		// Check to make sure the hmac is the right format
-		if(strlen($_POST['hmac']) != 128 || !ctype_xdigit($_POST['hmac'])) {
-			$response->addDebugMessage('Incorrect hmac format')->setErrorMessage(1);
+		// Check to make sure the response is the right format
+		if(strlen($_POST['response']) != 128 || !ctype_xdigit($_POST['response'])) {
+			$response->addDebugMessage('Incorrect response format')->addDebugMessage($_POST['response'])->setErrorMessage(1);
 		}
-		// Check to make sure the opaque is the right format
-		if(strlen($_POST['opaque']) != 64 || !ctype_xdigit($_POST['opaque'])) {
-			$response->addDebugMessage('Incorrect opaque format')->setErrorMessage(1);
+		// Check to make sure the challenge is the right format
+		if(strlen($_POST['challenge']) != 64 || !ctype_xdigit($_POST['challenge'])) {
+			$response->addDebugMessage('Incorrect challenge format')->addDebugMessage($_POST['challenge'])->setErrorMessage(1);
 		}
 		
-		$dbm = new DBManager('ohtar', 'logindb');
+		$dbm = new DBManager('arphen', 'logindb');
 		
 		// Check if number of attempts has been exceeded
-		if($dbm->getAttempts($_SERVER['REMOTE_ADDR']) > 5) {
+		if($dbm->getAttempts($_SERVER['REMOTE_ADDR']) > 15) {
 			$response->addDebugMessage('Number of attempts exceeded')->setErrorMessage(3);
+		}
+		
+		// Between 5 and 15 attempts
+		if($dbm->getAttempts($_SERVER['REMOTE_ADDR']) >= 5) {
+			// TODO implement captcha system
+			// Get captcha
+			
+			// Check to make sure captchaChallenge and captchaResponse were passed with the request
+			/*if(!isset($_POST['captchaChallenge']) || !isset($_POST['captchaResponse'])) {
+				
+			}*/
 		}
 		
 		// Check if username is valid and is in database
 		$id = $dbm->getUserId($_POST['username']);
 		if($id < 0) {
-			$response->addDebugMessage('Username does not exist or is invalid')->setErrorMessage(2);
+			$response->addDebugMessage('Username does not exist or is invalid')->addDebugMessage(username)->setErrorMessage(2);
 		}
 		// Verify password
-		if($dbm->verifyPassword($_POST['opaque'], $_POST['hmac'], $id)) {
-			$response->addDebugMessage('Incorrect password')->setErrorMessage(2);
+		if(is_null($token = $dbm->verifyPassword($_POST['challenge'], $_POST['response'], $id))) {
+			$response->addDebugMessage('Incorrect response')->setErrorMessage(2);
 		}
 		
-		$response->setStatus('success');
+		$response->setResult($token)->setStatus('success');
 		break;
 	case 'password_recovery':
 		if(!isset($_POST['username']) || !isset($_POST['email'])) {

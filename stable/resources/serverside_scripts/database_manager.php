@@ -74,53 +74,39 @@ class DBManager {
 		return $row['username'];
 	}
 	
-	// Asymmetric implementation
-	function verifyPassword($opaque, $hmacHash, $userid = -1) {
+	// Checks a challenge-response pair and returns a token if it is a match
+	function verifyPassword($challenge, $response, $userid) {
 		// Get login data
-		$stmt = $this->db->prepare('SELECT `hmacHash`, `nonce`, `cnonce` FROM `loginData` WHERE `opaque` = :opaque AND `lastAccess`+24*60*60 < NOW()');
-		$stmt->bindParam(':opaque', $opaque, PDO::PARAM_STR);
+		$stmt = $this->db->prepare('SELECT `hmacHash` FROM `loginData` WHERE `userid` = :userid');
+		$stmt->bindParam(':userid', $userid, PDO::PARAM_INT);
 		$stmt->execute();
 		$row = $stmt->fetch(PDO::FETCH_ASSOC);
-		if(!$row) {
+		if(!$row || !isset($row['hmacHash'])) {
 			return null;
 		}
-		if($row['cnonce'] == 0 && $userid < 0) {
-			// A userid must be specified if logging in, and cnonce is only zero when logging in
-			return false;
-		}
-		
-		// Generate hash
-		$serverHmacHash = hash_hmac('sha512', $row['nonce'].$row['cnonce'], $row['hmacHash']);
+
+		// Generate response on the serverside
+		$serverResponse = hash_hmac('sha512', $challenge, $row['hmacHash']);
 
 		// Check password
-		$isCorrect = slowEqual($hmacHash, $serverHmacHash);
-		
-		if($row['cnonce'] == 0) {
-			if($isCorrect) {
-				// Update cnonce and userid since this is a login
-				$stmt = $this->db->prepare('UPDATE `session` SET `cnonce` = `cnonce`+1, `userid` = :userid WHERE `opaque` = :opaque');
-				$stmt->bindParam(':userid', $userid, PDO::PARAM_INT);
-				$stmt->bindParam(':opaque', $opaque, PDO::PARAM_STR);
-				if(!$stmt->execute()) {
-					// Technically verification was successful, but the user needs to know that login failed
-					return false;
-				}
-			}
-			else {
-				// Only update failed attempt, cnonce should remain at 0 when logging in
-				$stmt = $this->db->prepare('UPDATE `session` SET `failedAttempts` = `failedAttepts`+1 WHERE `opaque` = :opaque');
-				$stmt->bindParam(':opaque', $opaque, PDO::PARAM_STR);
-				$stmt->execute();
-			}
-		}
-		else {
-			// Update cnonce
-			$stmt = $this->db->prepare('UPDATE `session` SET `cnonce` = `cnonce`+1 WHERE `opaque` = :opaque');
-			$stmt->bindParam(':opaque', $opaque, PDO::PARAM_STR);
-			$stmt->execute();
-		}
+		$isCorrect = $this->slowEqual($response, $serverResponse);
 
-		return $isCorrect;
+		if(!$isCorrect) {
+			return null;
+		}
+		
+		// Generate a 32 character hex string
+		$token = bin2hex(openssl_random_pseudo_bytes(16));
+		
+		$stmt = $this->db->prepare('INSERT INTO `sessions` (`userid`, `token`) VALUES (:userid, :token)');
+		$stmt->bindParam(':userid', $userid, PDO::PARAM_INT);
+		$stmt->bindParam(':token', $token, PDO::PARAM_STR);
+		if(!$stmt->execute()) {
+			// Technically verification was successful, but the user needs to know that sign in failed
+			return null;
+		}
+		
+		return $token;
 	}
 	
 	// This function is provided in case the client needs to synchronize the cnonce
@@ -261,24 +247,55 @@ class DBManager {
 	
 	// Gets the number of recent attempts an ip has made to login
 	function getAttempts($ipAddress) {
-		$stmt = $this->db->prepare('SELECT SUM(`failedAttempts`) AS attempts FROM `sessions` WHERE `ipAddress` = :ip AND `lastAttemptTime`+5*60 < NOW()');
+		$stmt = $this->db->prepare('SELECT SUM(`failedAttempts`) AS attempts FROM `challenges` WHERE `ipAddress` = :ip AND `creationTime`+60*60 > NOW()');
 		$stmt->bindParam(':ip', $ipAddress, PDO::PARAM_STR);
 		$stmt->execute();
 		$row = $stmt->fetch(PDO::FETCH_ASSOC);
-		if(!$row) {
+		if(!$row || !isset($row['attempts']) || !is_numeric($row['attempts'])) {
 			return 0;
 		}
 		
-		return $row['attempts'];
+		return (int) $row['attempts'];
 	}
 	
-	// Get nonce and stuff for logging in
+	// Get challenge for logging in
+	function getChallenge($ipAddress) {
+		if(!filter_var($ipAddress, FILTER_VALIDATE_IP)) {
+			return 'null';
+		}
+		
+		// Get all non-expired challenges for this ip address
+		$stmt = $this->db->prepare('SELECT `userid`, `challenge` FROM `challenges` WHERE `ipAddress` = :ip AND `creationTime`+60*60 > NOW()');
+		$stmt->bindParam(':ip', $ipAddress, PDO::PARAM_STR);
+		$stmt->execute();
+		$row = $stmt->fetch(PDO::FETCH_ASSOC);
+		
+		// If there are no such challenges, create a new one 
+		if(!$row || !isset($row['challenge'])) {
+			// Generate challenge
+			$challenge = hash('sha256', uniqid());
+
+			// Add entry to database
+			$stmt = $this->db->prepare('INSERT INTO `challenges` (`challenge`, `ipAddress`) VALUES (:challenge, :ip)');
+			$stmt->bindParam(':challenge', $challenge, PDO::PARAM_STR);
+			$stmt->bindParam(':ip', $ipAddress, PDO::PARAM_STR);
+			$result = $stmt->execute();
+
+			// Return challenge 
+			return $challenge;
+		}
+		else {
+			return (string) $row['challenge'];
+		}
+	}
+	
+	// No longer used
 	function getAuth($ipAddress) {
 		if(!filter_var($ipAddress, FILTER_VALIDATE_IP)) {
 			return null;
 		}
 		
-		$stmt = $this->db->prepare('SELECT `userid`, `opaque`, `nonce`, `cnonce` FROM `sessions` WHERE `ipAddress` = :ip');
+		$stmt = $this->db->prepare('SELECT `userid`, `opaque`, `nonce`, `cnonce` FROM `challenges` WHERE `ipAddress` = :ip AND `creationTime`+60*60 > NOW()');
 		$stmt->bindParam(':ip', $ipAddress, PDO::PARAM_STR);
 		$stmt->execute();
 		$row = $stmt->fetch(PDO::FETCH_ASSOC);

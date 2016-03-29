@@ -21,18 +21,17 @@ $dbm = new DBManager('arphen', 'logindb');
   </style>
   <script type="text/javascript" src="/resources/scripts/sha512.js"></script>
   <script type="text/javascript">
-var auth = JSON.parse('<?php echo json_encode($dbm->getAuth($_SERVER['REMOTE_ADDR'])); ?>');
+var challenge = "<?php echo isset($_COOKIE['challenge']) ? $_COOKIE['challenge'] : $dbm->getChallenge($_SERVER['REMOTE_ADDR']); ?>";
+if(challenge == "null") challenge = null;
 
-function hasSessionStorage() {
-	try {
-		var storage = window["sessionStorage"],	x = '__storage_test__';
-		storage.setItem(x, x);
-		storage.removeItem(x);
-		return true;
+function createCookie(name,value,days) {
+	if (days) {
+		var date = new Date();
+		date.setTime(date.getTime()+(days*24*60*60*1000));
+		var expires = "; expires="+date.toGMTString();
 	}
-	catch(e) {
-		return false;
-	}
+	else var expires = "";
+	document.cookie = name+"="+value+expires+"; path=/";
 }
 
 function readCookie(name) {
@@ -40,37 +39,17 @@ function readCookie(name) {
 	var ca = document.cookie.split(';');
 	for(var i=0;i < ca.length;i++) {
 		var c = ca[i];
-		while (c.charAt(0) == ' ') {
-			c = c.substring(1,c.length);
-		}
-		if (c.indexOf(nameEQ) == 0) {
-			return c.substring(nameEQ.length,c.length);
-		}
+		while (c.charAt(0)==' ') c = c.substring(1,c.length);
+		if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
 	}
 	return null;
 }
 
-function setPrivate(key, value) {
-	if(hasSessionStorage()) {
-		sessionStorage.setItem(key, value);
-	}
-	else {
-		document.cookie = key + "=" + value;
-	}
-}
-
-function getPrivate(key) {
-	if(hasSessionStorage()) {
-		return sessionStorage.getItem(key);
-	}
-	else {
-		return readCookie(key);
-	}
+function eraseCookie(name) {
+	createCookie(name,"",-1);
 }
 
 function submitSignIn() {
-	$("#signin_feedback").html("Logging in, please be patient as this can take several seconds.").show();
-	
 	var realm = "TVP";
 	
 	var username = $("#username").val();
@@ -81,9 +60,16 @@ function submitSignIn() {
 
 	if($("#signin_form input").hasClass("invalid")) return;
 
+	$("#signin_feedback").html("Logging in, please be patient as this can take several seconds.").show();
+
+	if(challenge == null) {
+		$("#signin_feedback").html("Sorry, sign in has failed. Please try again.");
+		return;
+	}
+
 	var message = username + realm + password;
 
-	// Apply apply hmac 4096 times, outputting hex in the iteration
+	// Apply hmac 4096 times, outputting hex in the iteration
 	var shaObj = new jsSHA("SHA-512", "TEXT");
 	shaObj.update(message);
 	var subhash = "";
@@ -99,20 +85,32 @@ function submitSignIn() {
 	shaObj.update(subhash);
 	subhash = shaObj.getHMAC("HEX");
 
+	console.log("subhash = " + subhash);
+
 	shaObj = new jsSHA("SHA-512", "TEXT");
 	shaObj.setHMACKey(subhash, "TEXT");
-	shaObj.update(auth.nonce);
+	shaObj.update(challenge);
 	var hash = shaObj.getHMAC("HEX");
 
-	$.post("/resources/serverside_scripts/login_manager.php", { op: "login", username: username, opaque: auth.opaque, hmac: hash }, function(data) {
-		if(data.status == "success") {
-			document.cookie = "opaque=" + auth.opaque;
-			setPrivate("username", username);
+	$.post("/resources/serverside_scripts/login_manager.php", { op: "signin", username: username, challenge: challenge, response: hash }, function(data) {
+		if(data.status == "success" && data.result != null) {
+			createCookie("token", data.result, 7);
+			createCookie("username", username, 7);
+			// TODO redirect to profile
 			$("#signin_feedback").html("You are now signed in as " + username);
 		}
 		else {
 			$("#signin_feedback").html("Sorry, sign in has failed. Please try again.");
 		}
+	}, "json").fail(function() {
+		$("#signin_feedback").html("Sorry, sign in has failed. Please try again.");
+	}).always(function() {
+		eraseCookie("challenge");
+		$.post("/resources/serverside_scripts/login_manager.php", { op: "get_challenge" }, function(data) {
+			if(data.status == "success" && data.result != null) {
+				createCookie("challenge", data.result, 1);
+			}
+		}, "json");
 	});
 }
 
@@ -165,13 +163,15 @@ function verifyPassword() {
 }
 
 $(document).ready(function() {
-	if(auth.signedIn) {
+	if(readCookie("challenge") == null) {
+		createCookie("challenge", challenge, 1);
+	}
+	/*if(auth.signedIn) {
 		$("#signin_form").hide();
 		// TODO add logout option
 		$("#pageContents").append("You are already signed in.");
 		return;
-	}
-	$("#signin_submit").click(submitSignIn);
+	}*/
 	$("#signin_form").submit(function(e) { submitSignIn(); e.preventDefault(); });
 });
   </script>
@@ -196,7 +196,7 @@ $(document).ready(function() {
     </tbody>
    </table>
    <p><a class="hiddenLink">Forgot password</a></p>
-   <button id="signin_submit">Sign In</button>
+   <button id="signin_submit" type="submit">Sign In</button>
   </form>
   <a href="register.php">Don't have an account? Register here!</a>
   <?php bodyEnd(); ?>
