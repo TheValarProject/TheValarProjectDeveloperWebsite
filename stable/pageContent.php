@@ -15,9 +15,10 @@ catch(Exception $e) {
 	exit('Internal error occurred');
 }
 
-$dbReader = new DBManager('ohtar', 'logindb');
+// Needs to be arphen to update access time >:(
+$dbReader = new DBManager('arphen', 'logindb');
 
-$loggedIn = isset($_COOKIE['username']);
+$loggedIn = isset($_COOKIE['username']) && isset($_COOKIE['token']) ? $dbReader->checkToken($dbReader->getUserId($_COOKIE['username']), $_COOKIE['token']) : false;
 
 function head() {
 	echo '<link rel="icon" type="image/png" href="/resources/images/favicon.png" /><link rel="stylesheet" type="text/css" href="/resources/styling/jquery-ui-smoothness/jquery-ui.min.css" /><link rel="stylesheet" type="text/css" href="/resources/styling/baseStyling.css" /><script type="text/javascript" src="/resources/scripts/jquery.min.js"></script><script type="text/javascript" src="/resources/scripts/jquery-ui.min.js"></script><script src="/resources/scripts/baseScript.php"></script>';
@@ -27,9 +28,7 @@ function bodyStart() {
 	global $loggedIn;
 	echo '<div id="primaryContainer"><div id="hoveringContent">';
 	if($loggedIn) {
-		echo '<span id="userInfo"><span>';
-		echo $_COOKIE['username'];
-		echo '</span></span>';
+		echo '<span id="userInfo"><span><a class="styled-link" href="/profile.php?u='.$_COOKIE['username'].'">'.$_COOKIE['username'].'</a></span></span>';
 	}
 	else {
 		echo '<span id="loginButton"><a href="/signin.php">Sign In</a></span>';

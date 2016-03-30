@@ -356,6 +356,28 @@ class DBManager {
 		return true;
 	}
 	
+	function checkToken($userid, $token) {
+		// Make sure userid is properly formatted and valid
+		if(!is_numeric($userid) || $userid < 0) {
+			return false;
+		}
+		// Make sure token is properly formatted
+		if(strlen($token) != 32 || !ctype_xdigit($token)) {
+			return false;
+		}
+
+		$stmt = $this->db->prepare('SELECT `lastAccessTime` FROM `sessions` WHERE `userid` = :userid AND `token` = :token AND DATE_ADD(`lastAccessTime`, INTERVAL 1 DAY) > NOW()');
+		$stmt->bindParam(':userid', $userid, PDO::PARAM_INT);
+		$stmt->bindParam(':token', $token, PDO::PARAM_STR);
+		$stmt->execute();
+		$row = $stmt->fetch(PDO::FETCH_ASSOC);
+		if(!$row) {
+			return false;
+		}
+
+		return true;
+	}
+	
 	function logout() {
 		
 	}
