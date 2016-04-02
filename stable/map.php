@@ -9,7 +9,7 @@ include('pageContent.php');
  </head>
  <body>
   <?php bodyStart(); ?>
-This website is still under construction and this page is not available. Please be patient while we work on getting everything online. Thank you for your patience.
+  <iframe src="http://<?php echo gethostbyname('tvp.squarechair.net') == $_SERVER['REMOTE_ADDR'] ? 'localhost' : "tvp.squarechair.net"; ?>:8123"></iframe>
   <?php bodyEnd(); ?>
  </body>
 </html>
