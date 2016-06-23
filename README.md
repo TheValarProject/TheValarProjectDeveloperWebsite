@@ -11,19 +11,19 @@ Within a few days, a project administrator will add you to the Website Experimen
 ## Making changes
 There are only certain branches that you will be allowed to modify. Modifying branches without proper permission may result in loosing contributor access. Let's take a moment to go over the types of branches:
 
-### Master branch
+#### Master branch
 The master branch contains help files for contributing and stores some configuration data needed for the automated deployment system. Under most circumstances you should not need to edit this branch.
 
-### Mirror branch
+#### Mirror branch
 The mirror branch contains a complete copy of the actual website code. This is provided for convenience when making a new branch. Never commit changes to this branch.
 
-### User branches
+#### User branches
 User branches allow access only to a single specific user. The follow naming convention is used: `u-<id_number>-<username>` where <id_number> is a number to uniquely identify the branch from other branches by the same user and <username> is the Github username of the only user that can access this branch. You can only modify these if your username matches the username in the branch name. You may make as many of these as you need for yourself.
 
-### Group branches
+#### Group branches
 Group branches allow access only to a specific subset of users. The following naming convention is used: `g-<id_number/project_name>` where <id_number/project_name> can be a uniquely identifying number, or a short name to quickly describe what the branch is for. We haven't settled on a way of setting this up yet, so for now file an issue titled `Group Request`. In the body of the issue specify what you want this group for and who you want to be in this group. Inside any group branch there should be a `group-info.json` file, which will contain information on who is allowed to edit it. If you are not in this list, you cannot edit the branch. To delete the branch, you should have consent of all members of the group.
 
-### Public branches
+#### Public branches
 Public branches allow access to anyone. We highly suggest you use public branches for any major projects (such as new features) so that others can help you if they feel up to it. The following naming convention is used: `p-<id_number/project_name>` where <id_number/project_name> is used just like it is in the group branch. Anyone can make a new public branch, and anyone can edit it. Please do not delete public branches. If the project it was aimed for is complete or something like that, please file an issue titled `Branch Deletion Request (<branch_name>)` and describe in the body of the issue why it should be deleted.
 
 ## Viewing your changes
